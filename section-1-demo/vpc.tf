@@ -7,6 +7,14 @@ resource "aws_vpc" "main" {
 
     }
 }
+// the IGW is needed for the vpc to access the internet
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "main"
+  }
+}
 
 resource "aws_subnet" "public_subnets"{
     count = length(var.public_subnet_cidrs)
@@ -82,7 +90,9 @@ resource "aws_security_group" "ec2" {
 resource "aws_elb" "elb" {
     name               = "section1-elb"
     security_groups = [aws_security_group.load-balancer.id]
-    availability_zones = [ "us-east-2a", "us-east-2b", "us-east-2c" ]
+    //since you want to create the ELB in the public subnets, you need to specify the public subnet IDs
+   // availability_zones = [ "us-east-2a", "us-east-2b", "us-east-2c" ] 
+    subnets = [aws_subnet.public_subnets[0].id, aws_subnet.public_subnets[1].id, aws_subnet.public_subnets[2].id]
 
   listener {
     instance_port     = 8000
