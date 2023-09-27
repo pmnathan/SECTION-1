@@ -140,47 +140,46 @@ resource "aws_alb_target_group" "default-target-group" {
   }
 }
 
-# resource "aws_autoscaling_group" "ec2-cluster" {
-#   availability_zones = [ "us-west-2a", "us-west-2b", "us-west-2c" ]
-#   desired_capacity   = 3
-#   max_size           = 5
-#   min_size           = 3
-#   health_check_type = "EC2"
-#   launch_configuration = aws_launch_configuration.ec2.name
-#   # vpc_zone_identifier  = aws_subnet.public_subnets[count.index].id
-#   target_group_arns    = [aws_alb_target_group.default-target-group.arn]
+resource "aws_autoscaling_group" "ec2-cluster" {
+  availability_zones = [ "us-west-2a", "us-west-2b", "us-west-2c" ]
+  desired_capacity   = 3
+  max_size           = 5
+  min_size           = 3
+  health_check_type = "EC2"
+  #launch_configuration = aws_launch_configuration.ec2.name
+  # vpc_zone_identifier  = aws_subnet.public_subnets[count.index].id
+  target_group_arns    = [aws_alb_target_group.default-target-group.arn]
 
-#   launch_template {
-#     id      = aws_launch_template.amitemp.id
-#     version = "$Latest"
-#   }
-# }
-# resource "aws_autoscaling_attachment" "asg_attachment_bar" {
-#   autoscaling_group_name = aws_autoscaling_group.ec2-cluster.id
-#   lb_target_group_arn    = aws_alb_target_group.default-target-group.arn
-# }
+  launch_template {
+    id      = aws_launch_template.amitemp.id
+    version = "$Latest"
+  }
+}
+resource "aws_autoscaling_attachment" "asg_attachment_bar" {
+  autoscaling_group_name = aws_autoscaling_group.ec2-cluster.id
+  lb_target_group_arn    = aws_alb_target_group.default-target-group.arn
+}
 
-# resource "aws_alb_listener" "ec2-alb-http-listener" {
-#   load_balancer_arn = aws_elb.elb.id
-#   port              = "80"
-#   protocol          = "HTTP"
-#   depends_on        = [aws_alb_target_group.default-target-group]
+resource "aws_alb_listener" "ec2-alb-http-listener" {
+  load_balancer_arn = aws_elb.elb.arn
+  port              = "80"
+  protocol          = "HTTP"
+  depends_on        = [aws_alb_target_group.default-target-group]
 
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_alb_target_group.default-target-group.arn
-#   }
-# }
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.default-target-group.arn
+  }
+}
 
 # # auto 
-# resource "aws_launch_template" "amitemp" {
-#   name_prefix   = "section1"
-#   image_id      = "ami-0a55cdf919d10eac9"
-#   instance_type = "t2.micro"
-# }
+resource "aws_launch_template" "amitemp" {
+  name_prefix   = "section1"
+  image_id      = "ami-0a55cdf919d10eac9"
+  instance_type = "t2.micro"
+}
 
 # # initializing an internet gateway to provide access to the internet in the VPC
-
 # resource "aws_internet_gateway" "gw" {
 #     vpc_id = aws_vpc.main.id # or: .main.id..?
 
@@ -189,35 +188,35 @@ resource "aws_alb_target_group" "default-target-group" {
 #     }
 # }
 
-# resource "aws_eip" "nat_gateway" {
-#   domain = "vpc"
-#   associate_with_private_ip = "10.0.0.5"
-#   depends_on                = [aws_internet_gateway.gw]
-# }
+resource "aws_eip" "nat_gateway" {
+  domain = "vpc"
+  associate_with_private_ip = "10.0.0.5"
+  depends_on                = [aws_internet_gateway.gw]
+}
 
-# resource "aws_nat_gateway" "ngw" {
-#   allocation_id = aws_eip.nat_gateway.id
-#   subnet_id     = aws_subnet.public_subnets[0].id
+resource "aws_nat_gateway" "ngw" {
+  allocation_id = aws_eip.nat_gateway.id
+  subnet_id     = aws_subnet.public_subnets[0].id
 
-#   tags = {
-#     Name = "terraform-ngw"
-#   }
-#   depends_on = [aws_eip.nat_gateway]
-# }
+  tags = {
+    Name = "terraform-ngw"
+  }
+  depends_on = [aws_eip.nat_gateway]
+}
 
 # # Route tables for the subnets
-# resource "aws_route_table" "public-route-table" {
-#   vpc_id = aws_vpc.main.id
-#   tags = {
-#     Name = "public-route-table"
-#   }
-# }
-# resource "aws_route_table" "private-route-table" {
-#   vpc_id = aws_vpc.main.id
-#   tags = {
-#     Name = "private-route-table"
-#   }
-# }
+resource "aws_route_table" "public-route-table" {
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "public-route-table"
+  }
+}
+resource "aws_route_table" "private-route-table" {
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "private-route-table"
+  }
+}
 
 # # Route the public subnet traffic through the Internet Gateway
 # resource "aws_route" "public-internet-igw-route" {
@@ -227,25 +226,25 @@ resource "aws_alb_target_group" "default-target-group" {
 # }
 
 # # Route NAT Gateway
-# resource "aws_route" "nat-ngw-route" {
-#   route_table_id         = aws_route_table.private-route-table.id
-#   nat_gateway_id         = aws_nat_gateway.ngw.id
-#   destination_cidr_block = "0.0.0.0/0"
-# }
+resource "aws_route" "nat-ngw-route" {
+  route_table_id         = aws_route_table.private-route-table.id
+  nat_gateway_id         = aws_nat_gateway.ngw.id
+  destination_cidr_block = "0.0.0.0/0"
+}
 
 # # associate public subnets to second route table
-# resource "aws_route_table_association" "public_subnet_asso" {
-#  count = length(var.public_subnet_cidrs)
-#  subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
-#  route_table_id = aws_route_table.public-route-table.id
-# }
+resource "aws_route_table_association" "public_subnet_asso" {
+ count = length(var.public_subnet_cidrs)
+ subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
+ route_table_id = aws_route_table.public-route-table.id
+}
 
 # # associate private subnets to second route table
-# resource "aws_route_table_association" "private_subnet_asso" {
-#  count = length(var.private_subnet_cidrs)
-#  subnet_id      = element(aws_subnet.private_subnets[*].id, count.index)
-#  route_table_id = aws_route_table.private-route-table.id
-# }
+resource "aws_route_table_association" "private_subnet_asso" {
+ count = length(var.private_subnet_cidrs)
+ subnet_id      = element(aws_subnet.private_subnets[*].id, count.index)
+ route_table_id = aws_route_table.private-route-table.id
+}
 
 
 # # create second route table and associate it with same VPC
@@ -253,10 +252,10 @@ resource "aws_alb_target_group" "default-target-group" {
 # # resource "aws_route_table" "second_rt" {
 # #  vpc_id = aws_vpc.main.id
  
-# #  route {
-# #    cidr_block = "0.0.0.0/0"
-# #    gateway_id = aws_internet_gateway.gw.id
-# #  }
+#  route {
+#    cidr_block = "0.0.0.0/0"
+#    gateway_id = aws_internet_gateway.gw.id
+#  }
  
 # #  tags = {
 # #    Name = "2nd Route Table"

@@ -1,7 +1,7 @@
 # aws region variable
 variable "aws_region" {
     description = "AWS Region to launch servers"
-    default = "us-east-2"
+    default = "us-west-2"
   
 }
 
@@ -21,7 +21,7 @@ variable "private_subnet_cidrs" {
 variable "azs" { #creating multiple availability zones
     type = list(string)
     description = "Availability Zones"
-    default = [ "us-east-2a", "us-east-2b", "us-east-2c" ]
+    default = [ "us-west-2a", "us-west-2b", "us-west-2c" ]
   
 }
 
